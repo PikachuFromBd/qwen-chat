@@ -16,6 +16,6 @@ class AuthManager:
         return f"Bearer {self._token}"
 
     def get_cookie(self) -> str:
-        if not self._cookie:
-            raise AuthError("Cookie not found in .env")
-        return self._cookie
+        if self._cookie:
+            return self._cookie
+        return "x-ap=; acw_tc=; sca=; cna=; _bl_uid=; xlly_s=; token=; tfstk=; isg=; ssxmod_itna=; ssxmod_itna2="

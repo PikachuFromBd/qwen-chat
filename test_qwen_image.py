@@ -22,7 +22,6 @@ from qwen_chat.core.types.chat import ChatMessage, ImageBlock, TextBlock
 def main():
     print("Testing local image auto-upload via qwen-chat package...")
     auth_token = os.getenv("QWEN_AUTH_TOKEN")
-    cookie = os.getenv("QWEN_COOKIE")
     
     if not auth_token:
         print("Error: QWEN_AUTH_TOKEN is not set in .env")

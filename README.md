@@ -42,20 +42,17 @@ pip install qwen-chat
 
 ## ⚙️ Environment Setup
 
-To authenticate requests, extract your `Authorization` bearer token and `Cookie` from the [Qwen Web UI](https://chat.qwen.ai):
+To authenticate requests, extract your `Authorization` bearer token from the [Qwen Web UI](https://chat.qwen.ai):
 
 1. Go to [https://chat.qwen.ai](https://chat.qwen.ai) and log in.
 2. Open developer tools (`F12` or `Ctrl+Shift+I` / `Cmd+Option+I`) and navigate to the **Network** tab.
 3. Send any message in the chat interface.
 4. Locate the `completions` request (filter by Fetch/XHR).
-5. In the request headers:
-   - Copy the value of the `Authorization` header **without the word "Bearer "** (just copy the token starting with `eyJ...`).
-   - Copy the entire value of the `Cookie` header.
-6. Save these values in a `.env` file in the root of your project:
+5. Click on the request and go to the Headers tab. Copy the value of the `Authorization` header **without the word "Bearer "** (just copy the token starting with `eyJ...`).
+6. Save this value in a `.env` file in the root of your project:
 
 ```env
 QWEN_AUTH_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-QWEN_COOKIE="cna=...; cnaui=...; token=..."
 ```
 
 ---
