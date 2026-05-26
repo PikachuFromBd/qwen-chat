@@ -52,6 +52,26 @@ class Qwen:
     ) -> dict:
         import uuid
         import time
+
+        if len(messages) > 1:
+            normalized_messages = []
+            has_non_user_role = False
+            for msg in messages:
+                validated_msg = ChatMessage(**msg) if isinstance(msg, dict) else msg
+                role = getattr(validated_msg.role, "value", validated_msg.role)
+                if role != MessageRole.USER and role != MessageRole.USER.value:
+                    has_non_user_role = True
+                normalized_messages.append(validated_msg)
+
+            if has_non_user_role:
+                history = []
+                for msg in normalized_messages:
+                    role = getattr(msg.role, "value", msg.role)
+                    content = msg.content or ""
+                    if content:
+                        history.append(f"{role}: {content}")
+                messages = [ChatMessage(role=MessageRole.USER, content="\n".join(history))]
+
         validated_messages = []
         last_fid = parent_id
 
@@ -143,11 +163,7 @@ class Qwen:
                     "role": (
                         MessageRole.FUNCTION
                         if validated_msg.role == MessageRole.TOOL
-                        else (
-                            validated_msg.role
-                            if validated_msg.role == MessageRole.SYSTEM
-                            else MessageRole.USER
-                        )
+                        else MessageRole.USER
                     ),
                     "content": msg_content,
                     "user_action": "chat",

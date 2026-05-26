@@ -403,7 +403,7 @@ messages = [
     )
 ]
 
-response = client.chat.create(messages=messages, model="qwq-32b")
+response = client.chat.create(messages=messages, model="qwen3.6-plus")
 print("🤖", response.choices.message.content)
 ```
 
