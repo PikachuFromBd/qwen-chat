@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
-An unofficial, feature-rich Python SDK and client wrapper for the [Qwen AI](https://chat.qwen.ai) Web API. Enjoy seamless access to advanced models like `qwen3.6-plus` with support for search, deep reasoning, streaming, and automatic local image uploads.
+An unofficial, feature-rich Python SDK and client wrapper for the [Qwen AI](https://chat.qwen.ai) Web API. Enjoy seamless access to advanced models like `qwen3.6-plus` with support for streaming, multi-turn conversations, system prompts, web search, deep reasoning, and automatic local image uploads.
 
 ---
 
@@ -13,14 +13,20 @@ An unofficial, feature-rich Python SDK and client wrapper for the [Qwen AI](http
 - **🧠 Complete Model Support**  
   Interact with Qwen's latest web models including `qwen3.6-plus`, `qwen-max-latest`, `qwq-32b`, `qwen2.5-omni-7b`, and specialized vision/coder versions.
   
+- **💬 Multi-turn Chat Sessions**  
+  Have back-and-forth conversations that maintain context across messages — just like chatting in the Qwen web UI. Build interactive terminal chatbots or conversational agents easily.
+
 - **⚡ Synchronous & Asynchronous Clients**  
   Whether you're building a script or a highly concurrent async web server, `qwen-chat` has you covered with native `create()` and `acreate()` workflows.
 
-- **📸 Automatic Local Image Uploads (New!)**  
-  Pass a local file path or raw bytes to an `ImageBlock`. The client automatically fetches STS tokens and uploads the image to Alibaba Cloud OSS under the hood—no boilerplate manual upload code required!
+- **🌊 Real-time SSE Streaming (On/Off)**  
+  Toggle `stream=True` or `stream=False` per request. Stream token-by-token responses directly to your UI or console, or get the full response at once.
 
-- **🌊 Real-time SSE Streaming**  
-  Stream token-by-token responses directly to your UI or console, with fully structured chunks and search info outputs.
+- **🎭 System & Assistant Roles**  
+  Use `system` role messages to define the AI's personality, behavior, and instructions. Chain `assistant` and `user` roles for few-shot prompting and context injection.
+
+- **📸 Automatic Local Image Uploads**  
+  Pass a local file path or raw bytes to an `ImageBlock`. The client automatically fetches STS tokens and uploads the image to Alibaba Cloud OSS under the hood — no boilerplate required!
 
 - **🔍 Integrated Web Search**  
   Toggle real-time search on or off per message to query live web data and receive detailed citations alongside responses.
@@ -55,56 +61,217 @@ To authenticate requests, extract your `Authorization` bearer token from the [Qw
 QWEN_AUTH_TOKEN=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
 ```
 
+> **Note:** You do **not** need to set up cookies. The package handles cookies automatically.
+
 ---
 
-## 🚀 Quick Start Examples
+## 🚀 Usage Examples
 
-### 1. Basic Text Completion (Sync & Async)
+### 1. Basic Text Completion
 
-#### Sync:
+The simplest way to get a response from Qwen:
+
 ```python
 from qwen_chat import Qwen
 from qwen_chat.core.types.chat import ChatMessage
 
-# Initializes automatically using environment variables
 client = Qwen()
 
 messages = [
-    ChatMessage(
-        role="user",
-        content="Tell me a joke about programming!"
-    )
+    ChatMessage(role="user", content="What is Python?")
 ]
 
-response = client.chat.create(
-    messages=messages,
-    model="qwen3.6-plus"
-)
-print("🤖 AI Response:", response.choices.message.content)
+response = client.chat.create(messages=messages, model="qwen3.6-plus")
+print("🤖", response.choices.message.content)
 ```
 
-#### Async:
+---
+
+### 2. Streaming On / Off
+
+#### Stream OFF (get full response at once):
 ```python
-import asyncio
 from qwen_chat import Qwen
 from qwen_chat.core.types.chat import ChatMessage
 
-async def main():
+client = Qwen()
+messages = [ChatMessage(role="user", content="Tell me a short joke.")]
+
+# stream=False (default) — returns complete response
+response = client.chat.create(messages=messages, model="qwen3.6-plus", stream=False)
+print("🤖", response.choices.message.content)
+```
+
+#### Stream ON (token-by-token output):
+```python
+from qwen_chat import Qwen
+from qwen_chat.core.types.chat import ChatMessage
+
+client = Qwen()
+messages = [ChatMessage(role="user", content="Write a poem about the ocean.")]
+
+# stream=True — yields chunks in real-time
+stream = client.chat.create(messages=messages, model="qwen3.6-plus", stream=True)
+
+print("🤖 ", end="")
+for chunk in stream:
+    print(chunk.choices[0].delta.content, end="", flush=True)
+print()
+```
+
+---
+
+### 3. System Role & Assistant Role (Custom Personality)
+
+Use the `system` role to define how the AI behaves. Use `assistant` role for few-shot examples:
+
+```python
+from qwen_chat import Qwen
+from qwen_chat.core.types.chat import ChatMessage
+
+client = Qwen()
+
+messages = [
+    # System prompt — defines AI personality and behavior
+    ChatMessage(
+        role="system",
+        content="You are a friendly pirate captain. Always respond in pirate speak with lots of 'Arrr!' and nautical references."
+    ),
+    # User message
+    ChatMessage(
+        role="user",
+        content="What's the weather like today?"
+    )
+]
+
+response = client.chat.create(messages=messages, model="qwen3.6-plus")
+print("🏴‍☠️", response.choices.message.content)
+```
+
+#### Few-shot prompting with assistant role:
+```python
+from qwen_chat import Qwen
+from qwen_chat.core.types.chat import ChatMessage
+
+client = Qwen()
+
+messages = [
+    ChatMessage(role="system", content="You are a helpful translator. Translate English to Bengali."),
+    # Few-shot example
+    ChatMessage(role="user", content="Hello"),
+    ChatMessage(role="assistant", content="হ্যালো"),
+    ChatMessage(role="user", content="How are you?"),
+    ChatMessage(role="assistant", content="আপনি কেমন আছেন?"),
+    # Actual request
+    ChatMessage(role="user", content="I love programming")
+]
+
+response = client.chat.create(messages=messages, model="qwen3.6-plus")
+print("🤖", response.choices.message.content)
+```
+
+---
+
+### 4. Interactive Terminal Chat (Multi-turn Conversation)
+
+Build a fully interactive terminal chatbot that maintains conversation context across multiple turns — just like the Qwen web UI:
+
+```python
+from qwen_chat import Qwen
+from qwen_chat.core.types.chat import ChatMessage
+
+def main():
     client = Qwen()
-    messages = [ChatMessage(role="user", content="Explain quantum computing in one sentence.")]
-    
-    response = await client.chat.acreate(
-        messages=messages,
-        model="qwen3.6-plus"
-    )
-    print("🤖 AI Response:", response.choices.message.content)
+    print("💬 Qwen Chat Terminal")
+    print("Type 'exit' to quit\n")
 
-asyncio.run(main())
+    history = [
+        ChatMessage(
+            role="system",
+            content="You are a helpful and friendly AI assistant."
+        )
+    ]
+
+    while True:
+        try:
+            user_input = input("🧑 You: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nBye! 👋")
+            break
+
+        if user_input.lower() == "exit":
+            print("Bye! 👋")
+            break
+
+        # Add user message to conversation history
+        history.append(ChatMessage(role="user", content=user_input))
+
+        # Send full history for context-aware response
+        response = client.chat.create(
+            messages=history,
+            model="qwen3.6-plus",
+            temperature=0.7
+        )
+
+        reply = response.choices.message.content
+        print(f"🤖 AI: {reply}\n")
+
+        # Add assistant reply to history for next turn
+        history.append(ChatMessage(role="assistant", content=reply))
+
+if __name__ == "__main__":
+    main()
+```
+
+#### Interactive chat with streaming output:
+```python
+from qwen_chat import Qwen
+from qwen_chat.core.types.chat import ChatMessage
+
+def main():
+    client = Qwen()
+    print("💬 Qwen Streaming Chat")
+    print("Type 'exit' to quit\n")
+
+    history = []
+
+    while True:
+        try:
+            user_input = input("🧑 You: ").strip()
+        except (EOFError, KeyboardInterrupt):
+            print("\nBye! 👋")
+            break
+
+        if user_input.lower() == "exit":
+            print("Bye! 👋")
+            break
+
+        history.append(ChatMessage(role="user", content=user_input))
+
+        # Stream the response token-by-token
+        stream = client.chat.create(
+            messages=history,
+            model="qwen3.6-plus",
+            stream=True
+        )
+
+        print("🤖 AI: ", end="")
+        full_reply = ""
+        for chunk in stream:
+            text = chunk.choices[0].delta.content
+            print(text, end="", flush=True)
+            full_reply += text
+        print("\n")
+
+        history.append(ChatMessage(role="assistant", content=full_reply))
+
+if __name__ == "__main__":
+    main()
 ```
 
 ---
 
-### 2. SSE Streaming with Search Citations
+### 5. Web Search with Citations
 
 ```python
 from qwen_chat import Qwen
@@ -115,35 +282,29 @@ client = Qwen()
 messages = [
     ChatMessage(
         role="user",
-        content="What is the latest news about Space Devs?",
-        web_search=True  # Enables real-time web search citations
+        content="What are the latest developments in AI?",
+        web_search=True
     )
 ]
 
-stream = client.chat.create(
-    messages=messages,
-    model="qwen3.6-plus",
-    stream=True
-)
+stream = client.chat.create(messages=messages, model="qwen3.6-plus", stream=True)
 
 for chunk in stream:
     delta = chunk.choices[0].delta
-    # Extract search citation results if present
     if delta.extra and delta.extra.web_search_info:
-        print("\n🔍 Web Search Sources:")
+        print("\n🔍 Sources:")
         for source in delta.extra.web_search_info:
-            print(f"- {source.title}: {source.url}")
-        print("\n🤖 Assistant Response:")
-        
+            print(f"  • {source.title}: {source.url}")
+        print()
     print(delta.content, end="", flush=True)
 print()
 ```
 
 ---
 
-### 3. Automatic Local Image Upload (Vision)
+### 6. Automatic Local Image Upload (Vision)
 
-Just pass your local image path directly inside `ImageBlock`. The client automatically handles the secure upload sequence:
+Just pass your local image path directly inside `ImageBlock`. The client handles the secure upload automatically:
 
 ```python
 from qwen_chat import Qwen
@@ -155,32 +316,86 @@ messages = [
     ChatMessage(
         role="user",
         blocks=[
-            TextBlock(text="Extract all the text inside this image:"),
-            ImageBlock(path="receipt.jpg")  # Automatically uploaded to Alibaba OSS!
+            TextBlock(text="What's in this image? Describe it in detail."),
+            ImageBlock(path="photo.jpg")  # Auto-uploaded to Alibaba OSS!
         ]
     )
 ]
 
-response = client.chat.create(
-    messages=messages,
-    model="qwen3.6-plus"
-)
-print("🤖 AI Response:", response.choices.message.content)
+response = client.chat.create(messages=messages, model="qwen3.6-plus")
+print("🤖", response.choices.message.content)
+```
+
+---
+
+### 7. Async Usage
+
+```python
+import asyncio
+from qwen_chat import Qwen
+from qwen_chat.core.types.chat import ChatMessage
+
+async def main():
+    client = Qwen()
+    messages = [ChatMessage(role="user", content="Explain quantum computing in one sentence.")]
+    
+    response = await client.chat.acreate(messages=messages, model="qwen3.6-plus")
+    print("🤖", response.choices.message.content)
+
+asyncio.run(main())
+```
+
+---
+
+### 8. Thinking & Reasoning Mode
+
+Enable deep thinking for complex tasks:
+
+```python
+from qwen_chat import Qwen
+from qwen_chat.core.types.chat import ChatMessage
+
+client = Qwen()
+
+messages = [
+    ChatMessage(
+        role="user",
+        content="Solve this step by step: If a train travels 120km in 2 hours, then stops for 30 minutes, then travels 90km in 1.5 hours, what is the average speed for the entire journey?",
+        thinking=True,
+        thinking_budget=4096
+    )
+]
+
+response = client.chat.create(messages=messages, model="qwq-32b")
+print("🤖", response.choices.message.content)
 ```
 
 ---
 
 ## 🙋‍♂️ Contributing
 
-Contributions are welcome! Please feel free to open Issues or submit Pull Requests to help improve the library.
+Contributions are welcome! Here's how:
+
+1. Fork the project
+2. Create your feature branch (`git checkout -b feature/awesome-feature`)
+3. Commit your changes (`git commit -m 'Add awesome feature'`)
+4. Push to the branch (`git push origin feature/awesome-feature`)
+5. Open a Pull Request
+
+---
 
 ## 📃 License
 
-This project is licensed under the MIT License.
+This project is licensed under the [MIT License](LICENSE).
 
 ---
 
 ### 📞 Contact & Support
 
-For queries, support, or custom integrations, feel free to contact the author:
-* **Telegram**: [@liskiss](https://t.me/liskiss)
+<a href="https://t.me/liskiss"><img src="https://img.shields.io/badge/Telegram-@liskiss-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram" /></a>
+
+For queries, support, or custom integrations, feel free to reach out!
+
+---
+
+<p align="center">Made with ❤️ by <b>Shahadat Hassan</b></p>
