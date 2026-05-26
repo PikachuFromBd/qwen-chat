@@ -174,7 +174,9 @@ print("🤖", response.choices.message.content)
 
 ### 4. Interactive Terminal Chat (Multi-turn Conversation)
 
-Build a fully interactive terminal chatbot that maintains conversation context across multiple turns — just like the Qwen web UI:
+Build a fully interactive terminal chatbot that maintains conversation context across multiple turns — just like the Qwen web UI.
+
+> **How it works:** The Qwen API remembers your conversation server-side via `chat_id` and `parent_id`. You only need to send the **new message** each turn — the AI already knows the full conversation history.
 
 ```python
 from qwen_chat import Qwen
@@ -185,12 +187,14 @@ def main():
     print("💬 Qwen Chat Terminal")
     print("Type 'exit' to quit\n")
 
-    history = [
+    # Optional: send a system prompt as the very first message
+    system_msg = [
         ChatMessage(
             role="system",
             content="You are a helpful and friendly AI assistant."
         )
     ]
+    client.chat.create(messages=system_msg, model="qwen3.6-plus")
 
     while True:
         try:
@@ -199,25 +203,20 @@ def main():
             print("\nBye! 👋")
             break
 
-        if user_input.lower() == "exit":
+        if not user_input or user_input.lower() == "exit":
             print("Bye! 👋")
             break
 
-        # Add user message to conversation history
-        history.append(ChatMessage(role="user", content=user_input))
+        # Send only the new user message — the API remembers the conversation
+        messages = [ChatMessage(role="user", content=user_input)]
 
-        # Send full history for context-aware response
         response = client.chat.create(
-            messages=history,
+            messages=messages,
             model="qwen3.6-plus",
             temperature=0.7
         )
 
-        reply = response.choices.message.content
-        print(f"🤖 AI: {reply}\n")
-
-        # Add assistant reply to history for next turn
-        history.append(ChatMessage(role="assistant", content=reply))
+        print(f"🤖 AI: {response.choices.message.content}\n")
 
 if __name__ == "__main__":
     main()
@@ -233,8 +232,6 @@ def main():
     print("💬 Qwen Streaming Chat")
     print("Type 'exit' to quit\n")
 
-    history = []
-
     while True:
         try:
             user_input = input("🧑 You: ").strip()
@@ -242,28 +239,24 @@ def main():
             print("\nBye! 👋")
             break
 
-        if user_input.lower() == "exit":
+        if not user_input or user_input.lower() == "exit":
             print("Bye! 👋")
             break
 
-        history.append(ChatMessage(role="user", content=user_input))
+        # Send only the new message each turn
+        messages = [ChatMessage(role="user", content=user_input)]
 
-        # Stream the response token-by-token
         stream = client.chat.create(
-            messages=history,
+            messages=messages,
             model="qwen3.6-plus",
             stream=True
         )
 
         print("🤖 AI: ", end="")
-        full_reply = ""
         for chunk in stream:
             text = chunk.choices[0].delta.content
             print(text, end="", flush=True)
-            full_reply += text
         print("\n")
-
-        history.append(ChatMessage(role="assistant", content=full_reply))
 
 if __name__ == "__main__":
     main()
