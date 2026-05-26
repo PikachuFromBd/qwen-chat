@@ -4,7 +4,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python Version](https://img.shields.io/badge/python-3.11%2B-blue.svg)](https://www.python.org/downloads/)
 
-An unofficial, feature-rich Python SDK and client wrapper for the [Qwen AI](https://chat.qwen.ai) Web API. Enjoy seamless access to advanced models like `qwen3.6-plus` with support for streaming, multi-turn conversations, system prompts, web search, deep reasoning, and automatic local image uploads.
+An unofficial, feature-rich Python SDK and client wrapper for the [Qwen AI](https://chat.qwen.ai) Web API. Enjoy seamless access to advanced models like `qwen3.6-plus` with support for streaming, multi-turn conversations, system prompts, web search, deep reasoning, automatic local image uploads, and LlamaIndex integration.
 
 ---
 
@@ -33,6 +33,9 @@ An unofficial, feature-rich Python SDK and client wrapper for the [Qwen AI](http
 
 - **💡 Thinking & Reasoning Controls**  
   Adjust thinking budget settings to enable advanced reasoning capabilities on complex tasks.
+
+- **🦙 LlamaIndex Adapter**  
+  Use Qwen directly inside LlamaIndex with `QwenLlamaIndex` from the same `qwen_chat` package. No separate `qwen-api` or `qwen-llamaindex` package is required.
 
 ---
 
@@ -83,6 +86,47 @@ messages = [
 
 response = client.chat.create(messages=messages, model="qwen3.6-plus")
 print("🤖", response.choices.message.content)
+```
+
+---
+
+### LlamaIndex Usage
+
+Use Qwen as a LlamaIndex LLM from the same `qwen-chat` package:
+
+```python
+from qwen_chat import QwenLlamaIndex
+
+llm = QwenLlamaIndex(model="qwen3.6-plus")
+
+response = llm.complete("Reply with only: ok")
+print(response.text)
+```
+
+Chat example:
+
+```python
+from llama_index.core.base.llms.types import ChatMessage
+from qwen_chat import QwenLlamaIndex
+
+llm = QwenLlamaIndex(model="qwen3.6-plus")
+
+response = llm.chat([
+    ChatMessage(role="user", content="What is LlamaIndex?")
+])
+
+print(response.message.content)
+```
+
+Streaming example:
+
+```python
+from qwen_chat import QwenLlamaIndex
+
+llm = QwenLlamaIndex(model="qwen3.6-plus")
+
+for chunk in llm.stream_complete("Write one sentence about Python."):
+    print(chunk.delta, end="", flush=True)
 ```
 
 ---
